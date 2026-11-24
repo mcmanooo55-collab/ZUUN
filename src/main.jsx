@@ -1,7 +1,9 @@
 import React, { useLayoutEffect, useMemo, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter, useLocation } from 'react-router-dom';
+import { BrowserRouter, HashRouter, MemoryRouter, useLocation } from 'react-router-dom';
 import { copy, pages } from './content';
+import { readRoute } from './routes';
+import { standalone } from './runtime';
 import { Studio, Action, Eyebrow, Footer, useStudio } from './ui';
 import { Home } from './home';
 import { Work } from './work';
@@ -22,10 +24,8 @@ function Missing() {
 
 function App() {
   const { pathname } = useLocation();
-  const segments = pathname.split('/').filter(Boolean);
-  const lang = segments[0] === 'en' ? 'en' : 'ar';
-  if (segments[0] === 'en' || segments[0] === 'ar') segments.shift();
-  const page = (segments.length < 2 && pages.find(value => value.path === (segments[0] || ''))?.id) || 'missing';
+  const { lang, page: route } = readRoute(pathname);
+  const page = route?.id || 'missing';
   const text = copy[lang];
   const ctx = useMemo(() => ({ lang, page, text }), [lang, page, text]);
   const Screen = screens[page];
@@ -51,4 +51,9 @@ function App() {
   </World></Studio.Provider>;
 }
 
-createRoot(document.getElementById('root')).render(<BrowserRouter><App /></BrowserRouter>);
+// Hash navigation works from a downloaded file or a static site subdirectory.
+// In the sandboxed file viewer the document has an opaque origin; stay in memory.
+const Router = standalone
+  ? (window.origin === 'null' && location.protocol !== 'file:' ? MemoryRouter : HashRouter)
+  : BrowserRouter;
+createRoot(document.getElementById('root')).render(<Router><App /></Router>);

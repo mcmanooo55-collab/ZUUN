@@ -4,10 +4,12 @@ import { readFile, stat } from 'node:fs/promises';
 import { extname, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { handleContact } from './contact.mjs';
-import { copy, pages } from './src/content.js';
+import { copy } from './src/content.js';
+import { readRoute } from './src/routes.js';
 
 const root = fileURLToPath(new URL('./dist', import.meta.url));
 const html = resolve(root, 'index.html');
+const standaloneHtml = fileURLToPath(new URL('./preview/index.html', import.meta.url));
 const types = {
   '.html': 'text/html; charset=UTF-8', '.js': 'text/javascript; charset=UTF-8', '.css': 'text/css; charset=UTF-8',
   '.bin': 'application/octet-stream', '.webp': 'image/webp', '.png': 'image/png', '.svg': 'image/svg+xml', '.woff2': 'font/woff2',
@@ -56,10 +58,7 @@ const escapeHtml = (value) => value.replace(/[&<>"]/g, (char) => ({ '&': '&amp;'
 async function servePage(req, res, pathname) {
   const template = await readFile(html, 'utf8').catch(() => null);
   if (!template) return false;
-  const segments = pathname.split('/').filter(Boolean);
-  const lang = segments[0] === 'en' ? 'en' : 'ar';
-  if (segments[0] === 'en' || segments[0] === 'ar') segments.shift();
-  const page = segments.length < 2 && pages.find((item) => item.path === (segments[0] || ''));
+  const { lang, page } = readRoute(pathname);
   const id = page?.id ?? 'missing';
   const text = copy[lang];
   const title = id === 'home' ? text.hero.label : page?.name[lang] || text.missing.title;
@@ -86,6 +85,7 @@ const server = createServer(async (req, res) => {
     if (url.pathname === '/api/contact') { await handleContact(req, res); return; }
     if (req.method !== 'GET' && req.method !== 'HEAD') { res.writeHead(405, { Allow: 'GET, HEAD' }); res.end(); return; }
     const pathname = decodeURIComponent(url.pathname);
+    if (/^\/(?:ar\/|en\/)?preview\/index\.html$/.test(pathname) && await serve(req, res, standaloneHtml, 200)) return;
     const target = resolve(root, `.${pathname}`);
     if (/^\/(assets|media|fonts)\//.test(pathname) && target.startsWith(root + sep) && await serve(req, res, target, 200)) return;
     if (await servePage(req, res, pathname)) return;

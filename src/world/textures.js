@@ -1,4 +1,5 @@
 import * as T from 'three';
+import { publicAsset } from '../runtime';
 
 let textureRevision = 0;
 const textureReady = new Set();
@@ -98,7 +99,7 @@ function formaTexture() {
     texture.needsUpdate = true;
   }
   draw(null);
-  const image=new Image(); image.onload=()=>{ draw(image); notifyTextureReady(); }; image.src='/media/forma-chair.webp';
+  const image=new Image(); image.onload=()=>{ draw(image); notifyTextureReady(); }; image.src=publicAsset('/media/forma-chair.webp');
   return texture;
 }
 

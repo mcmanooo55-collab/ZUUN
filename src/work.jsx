@@ -1,3 +1,4 @@
+import { publicAsset } from './runtime';
 import { useId, useLayoutEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Check, Orbit, X } from 'lucide-react';
@@ -14,7 +15,7 @@ export function ProjectCard({ project, onOpen, current }) {
   return <article className="project-card project-card--spatial folio-card" aria-current={current ? 'true' : undefined} style={{ '--project-color': project.color }}>
     <div className={`project-art project-art--${project.id}`}>
       <div className="display-grid" aria-hidden="true"/>
-      <SceneView kind={project.id} interactive className="project-viewport" touchDrag={orbitTouch} label={`${text.scene.project}: ${name}`} instruction={text.scene.help} fallback={<img src={project.cover || project.image} width={project.cover ? 960 : 1200} height={project.cover ? 960 : 746} loading="lazy" alt="" />}/>
+      <SceneView kind={project.id} interactive className="project-viewport" touchDrag={orbitTouch} label={`${text.scene.project}: ${name}`} instruction={text.scene.help} fallback={<img src={publicAsset(project.cover || project.image)} width={project.cover ? 960 : 1200} height={project.cover ? 960 : 746} loading="lazy" alt="" />}/>
       <span className="project-sample"><i />{text.sample}</span>
       <span className="project-index mono"><bdi>P/{project.no}</bdi></span>
       <span className="project-orbit" aria-hidden="true"><Orbit size={14} strokeWidth={1.65}/>{text.editorial.stageNote}</span>
@@ -50,7 +51,7 @@ export function ProjectDialog({ project, onClose }) {
   const close = <button type="button" className={`icon-button${isIdentity ? '' : ' dialog-close'}`} onClick={onClose} autoFocus aria-label={text.close}><X size={22} strokeWidth={1.7} aria-hidden="true"/></button>;
   return <dialog className={`project-dialog${isIdentity ? ' project-dialog--identity' : ''}`} ref={dialog} aria-labelledby="project-detail-title" onCancel={event => { event.preventDefault(); onClose(); }} onClick={event => { if (event.target === event.currentTarget) onClose(); }}>
     {isIdentity && <div className="dialog-toolbar">{label}{close}</div>}
-    <div className="dialog-media"><img src={project.image} alt={project.alt[lang]} width="1200" height="746"/>{!isIdentity && close}</div>
+    <div className="dialog-media"><img src={publicAsset(project.image)} alt={project.alt[lang]} width="1200" height="746"/>{!isIdentity && close}</div>
     <div className="dialog-content">
       {!isIdentity && label}
       <h2 id="project-detail-title"><bdi lang={project.nameAr ? lang : 'en'}>{name}</bdi></h2>

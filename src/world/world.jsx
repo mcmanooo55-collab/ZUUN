@@ -24,10 +24,10 @@ export function World({ page, lang, children }) {
       invalidate();
     };
   }, [invalidate]);
-  const toggle = useCallback(() => setPlaying(state => {
-    try { localStorage.setItem('zuun-motion', state ? 'paused' : 'playing'); } catch { /* optional preference */ }
-    return !state;
-  }), []);
+  const setMotion = useCallback(value => {
+    try { localStorage.setItem('zuun-motion', value ? 'playing' : 'paused'); } catch { /* optional preference */ }
+    setPlaying(value);
+  }, []);
   useLayoutEffect(() => {
     playback.current.playing = playing;
     document.documentElement.dataset.motion = playing ? 'playing' : 'paused';
@@ -36,8 +36,12 @@ export function World({ page, lang, children }) {
   useEffect(() => {
     const query = matchMedia('(prefers-reduced-motion: reduce)');
     const change = () => setPlaying(readPlayback());
-    query.addEventListener('change', change);
-    return () => query.removeEventListener('change', change);
+    if (query.addEventListener) {
+      query.addEventListener('change', change);
+      return () => query.removeEventListener('change', change);
+    }
+    query.addListener?.(change);
+    return () => query.removeListener?.(change);
   }, []);
   useEffect(() => {
     let canceled = false;
@@ -66,7 +70,7 @@ export function World({ page, lang, children }) {
     for (const target of document.querySelectorAll('[data-loop]')) observer.observe(target);
     return () => observer.disconnect();
   }, [page]);
-  const value = useMemo(() => ({ register, playing, toggle, invalidate }), [register, playing, toggle, invalidate]);
+  const value = useMemo(() => ({ register, playing, setMotion, invalidate }), [register, playing, setMotion, invalidate]);
   return <WorldContext.Provider value={value}>
     <canvas className="world-canvas" aria-hidden="true" ref={canvas} />
     {children}

@@ -4,14 +4,40 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#0A0F2C" />
-    <meta name="description" content="ZUUN — وكالة رقمية متخصصة في تطوير واجهات الويب، تصميم UI/UX، الأتمتة بالذكاء الاصطناعي، وتطبيقات الموبايل." />
+    <meta name="description" content="ZUUN — وكالة رقمية للهويات البصرية وتصميم UI/UX وتطوير الويب والموبايل والأتمتة." />
     <link rel="preload" href="/fonts/manrope.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preload" href="/media/studio-light.bin" as="fetch" crossorigin="anonymous" fetchpriority="low" />
     <link rel="icon" type="image/png" href="/media/icon.png" />
     <title>ZUUN — استوديو رقمي مستقل</title>
+    <style>
+      body { margin: 0; }
+      .boot-screen { box-sizing: border-box; display: grid; place-items: center; min-height: 100vh; padding: 24px; background: radial-gradient(ellipse at 60% 33%, #182951, #0a0f2c 68%); color: #eef6ff; font-family: system-ui, sans-serif; }
+      .boot-screen > div { width: min(100%, 620px); padding: 26px 0; border-block: 1px solid #344564; }
+      .boot-screen h1 { margin: 0; text-align: start; font-size: clamp(52px, 13vw, 115px); letter-spacing: -.08em; line-height: 1.05; }
+      .boot-screen h1 bdi { font-weight: 800; letter-spacing: -.08em; }
+      .boot-screen h1 span { color: #54c9ff; }
+      .boot-screen p { margin: 13px 0 22px; color: #c6d5ea; line-height: 1.75; }
+      .boot-screen a { display: inline-block; padding: 10px 16px; color: #e8f6ff; border: 1px solid #5983a8; border-radius: 99px; text-decoration: none; }
+      .boot-screen a:focus-visible { outline: 2px solid #75d5ff; outline-offset: 4px; }
+      html[lang="ar"] .boot-en, html[lang="en"] .boot-ar { display: none; }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <main class="boot-screen">
+        <div>
+          <h1><bdi lang="en">ZUUN<span>.</span></bdi></h1>
+          <section class="boot-ar">
+            <p>استوديو رقمي مستقل. لو الموقع ما ظهرش، افتح النسخة المستقلة للمعاينة.</p>
+            <a href="./preview/index.html">افتح معاينة الموقع</a>
+          </section>
+          <section class="boot-en">
+            <p>An independent digital studio. If the site has not loaded, open the standalone preview.</p>
+            <a href="./preview/index.html">Open the site preview</a>
+          </section>
+        </div>
+      </main>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

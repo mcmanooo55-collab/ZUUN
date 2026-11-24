@@ -1,4 +1,5 @@
 import * as T from 'three';
+import { publicAsset, standalone } from '../runtime';
 import { buildScene } from './models';
 import { onTextureReady, readTextureRevision } from './textures';
 
@@ -21,9 +22,15 @@ async function loadStudioLight(signal) {
   // Linear RGBA16F, CubeUV atlas baked once from the original Three.js RoomEnvironment.
   const w = 336, h = 128;
   try {
-    const response = await fetch('/media/studio-light.bin', { signal });
-    if (!response.ok) return null;
-    const bytes = await response.arrayBuffer();
+    const source = publicAsset('/media/studio-light.bin');
+    let bytes;
+    if (standalone) {
+      bytes = Uint8Array.from(atob(source.slice(source.indexOf(',') + 1)), char => char.charCodeAt(0)).buffer;
+    } else {
+      const response = await fetch(source, { signal });
+      if (!response.ok) return null;
+      bytes = await response.arrayBuffer();
+    }
     if (bytes.byteLength !== w * h * 8) return null;
     const data = new Uint16Array(bytes);
     if (new Uint8Array(new Uint16Array([1]).buffer)[0] !== 1) {
@@ -196,10 +203,13 @@ export function makeWorld(canvas, registry, playback) {
         continue;
       }
       let scroll = 0;
-      const timeline = view.options.current.timeline?.current;
-      if (runs && timeline) {
-        const range = timeline.offsetHeight - (timeline.firstElementChild?.offsetHeight || h);
-        if (range > 2) scroll = Math.max(0, Math.min(1, -timeline.getBoundingClientRect().top / range));
+      const { timeline, reveal } = view.options.current;
+      const demo = reveal?.current;
+      const pin = timeline?.current;
+      if (runs && demo) scroll = demo.progress;
+      else if (runs && pin) {
+        const range = pin.offsetHeight - (pin.firstElementChild?.offsetHeight || h);
+        if (range > 2) scroll = Math.max(0, Math.min(1, -pin.getBoundingClientRect().top / range));
       }
       const entry = { id, view, x, y, sw, sh, bx, by, ex, ey, scroll };
       visible.push(entry);

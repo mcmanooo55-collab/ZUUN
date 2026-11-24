@@ -8,7 +8,8 @@
     "build": "vite build",
     "postbuild": "node scripts/compress.mjs",
     "start": "node server.mjs",
-    "inbox": "node scripts/inbox.mjs"
+    "inbox": "node scripts/inbox.mjs",
+    "build:preview": "node scripts/standalone.mjs"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",

@@ -1,6 +1,7 @@
+import { publicAsset } from './runtime';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ArrowDown, ArrowUpRight, X } from 'lucide-react';
+import { ArrowDown, ArrowUpRight, Play, X } from 'lucide-react';
 import { pages } from './content';
 import { PageLink, pathFor, useStudio } from './ui';
 import { SceneView, useWorld } from './world/world';
@@ -9,13 +10,13 @@ const formatted = n => String(n).padStart(2, '0');
 
 function MotionChoices({ className = '' }) {
   const { text } = useStudio();
-  const { playing, toggle } = useWorld();
+  const { playing, setMotion } = useWorld();
   const e = text.editorial;
   return <div className={`motion-choices ${className}`} role="group" aria-label={e.motion}>
     <span className="mast-control-label">{e.motion}</span>
-    <button type="button" aria-label={`${e.auto} — ${text.scene.play}`} aria-pressed={playing} onClick={() => { if (!playing) toggle(); }}>{e.auto}</button>
+    <button type="button" aria-label={text.scene.play} aria-pressed={playing} onClick={()=>setMotion(true)}>{e.auto}</button>
     <span aria-hidden="true" className="utility-slash">/</span>
-    <button type="button" aria-label={`${e.pause} — ${text.scene.pause}`} aria-pressed={!playing} onClick={() => { if (playing) toggle(); }}>{e.pause}</button>
+    <button type="button" aria-label={text.scene.pause} aria-pressed={!playing} onClick={()=>setMotion(false)}>{e.pause}</button>
   </div>;
 }
 
@@ -50,7 +51,7 @@ function MenuPanel({ onClose }) {
 }
 
 function Logo(props = {}) {
-  return <PageLink page="home" className="mast-brand" aria-label="ZUUN" {...props}><img src="/media/zuun.png" alt="ZUUN" width="524" height="249"/></PageLink>;
+  return <PageLink page="home" className="mast-brand" aria-label="ZUUN" {...props}><img src={publicAsset('/media/zuun.png')} alt="ZUUN" width="524" height="249"/></PageLink>;
 }
 
 export function Masthead() {
@@ -127,45 +128,93 @@ export function NextChapter() {
   return <Chapter index="05" label={text.cta.label} className="contact-chapter" labelledBy="next-title"><div className="chapter-pad next-layout" data-depth><div><p className="editorial-tag"><span/> {text.cta.label}</p><h2 id="next-title">{text.editorial.ending}</h2><p className="editorial-copy">{text.cta.text}</p></div><RoundLink page="contact">{text.cta.button}</RoundLink></div></Chapter>;
 }
 
+// A few vector strands echo the live particle scene without requiring WebGL.
+const posterThreads = Array.from({ length: 23 }, (_, i) => {
+  const x=20+i*36, ripple=Math.sin(i*.71), endX=317+((i*53)%192), endY=63+((i*29)%158);
+  return {
+    d: `M ${x} ${166+ripple*68} C ${x+52+ripple*36} ${94+ripple*124}, ${endX+37-ripple*121} ${276-ripple*101}, ${endX} ${endY}`,
+    opacity: .33+(i%7)*.094,
+  };
+});
 function WordPoster() {
-  return <div className="word-poster-wrap" aria-hidden="true"><span className="word-poster">ZUUN<span>.</span></span><img className="poster-bird" src="/media/bird.png" alt="" width="416" height="367"/></div>;
+  return <div className="word-poster-wrap" aria-hidden="true">
+    <span className="word-poster">ZUUN<span>.</span></span>
+    <svg className="poster-threads" viewBox="0 0 840 320" fill="none" aria-hidden="true">
+      {posterThreads.map(({ d, opacity }, i)=><path key={d} d={d} opacity={opacity} stroke="currentColor" strokeWidth={i%5===0?1.8:1} pathLength={1} style={{ '--strand-delay':i*.009 }}/>) }
+    </svg>
+    <img className="poster-bird" src={publicAsset('/media/bird.png')} alt="" width="416" height="367"/>
+  </div>;
 }
 
+const revealDuration = 2290;
 export function WordmarkHero() {
   const timeline = useRef(null);
+  const reveal = useRef(null);
   const settled = useRef(0);
+  const refresh = useRef(null);
   const { text } = useStudio();
-  const { playing } = useWorld();
+  const { playing, setMotion, invalidate } = useWorld();
   const e = text.editorial;
-  useEffect(() => {
+  function playReveal() {
+    reveal.current = { progress: 0, elapsed: 0, stamp: null, anchor: window.scrollY };
+    if (!playing) setMotion(true);
+    refresh.current?.();
+    invalidate();
+  }
+  useLayoutEffect(() => {
     const node = timeline.current;
     if (!node) return;
     const pin = node.firstElementChild;
-    const view = node.querySelector('[data-scene="wordmark"]');
     let raf = 0, range = 0, start = 0, last = -1;
-    const place = () => {
+    const request = () => { if (!raf && !document.hidden) raf = requestAnimationFrame(place); };
+    const place = now => {
       raf = 0;
-      const p = playing && range > 2 ? Math.min(1, Math.max(0, (window.scrollY - start) / range)) : settled.current;
+      const demo = reveal.current;
+      let p = settled.current;
+      if (playing && demo) {
+        const dt = demo.stamp === null ? 0 : Math.min(64, Math.max(0, now-demo.stamp));
+        demo.elapsed = Math.min(revealDuration, demo.elapsed + dt);
+        demo.stamp = now;
+        demo.progress = demo.elapsed / revealDuration;
+        p = demo.progress;
+        if (p < 1) request();
+      } else if (playing && range > 2) {
+        p = Math.min(1, Math.max(0, (window.scrollY - start) / range));
+      } else if (demo) {
+        demo.stamp = null;
+      }
       settled.current = p;
-      // The live renderer follows the scroll directly; only the CSS fallback needs these styles.
-      if (view?.dataset.state === 'live' || p === last) return;
-      last = p;
-      node.style.setProperty('--caption-offset', `${(p*26).toFixed(2)}px`);
-      node.style.setProperty('--type-fade', (1-Math.min(1,Math.max(0,(p-.105)/.47))).toFixed(3));
-      node.style.setProperty('--bird-fade', Math.min(1,Math.max(0,(p-.46)/.51)).toFixed(3));
+      if (p !== last) {
+        last = p;
+        node.style.setProperty('--reveal-progress', p.toFixed(4));
+      }
     };
-    const scroll = () => { if (!raf) raf = requestAnimationFrame(place); };
+    const scroll = () => {
+      if (playing && range > 2 && reveal.current && Math.abs(window.scrollY - reveal.current.anchor) > 8) reveal.current = null;
+      request();
+    };
     const measure = () => {
       range = node.offsetHeight - pin.offsetHeight;
       start = node.getBoundingClientRect().top + window.scrollY;
-      scroll();
+      request();
     };
+    const visibility = () => {
+      if (reveal.current) reveal.current.stamp = null;
+      if (!document.hidden) request();
+    };
+    refresh.current = request;
     const resize = typeof ResizeObserver === 'function' ? new ResizeObserver(measure) : null;
     resize?.observe(node); resize?.observe(pin);
-    const state = new MutationObserver(scroll);
-    if (view) state.observe(view, { attributes: true, attributeFilter: ['data-state'] });
-    measure(); window.addEventListener('scroll',scroll,{passive:true});window.addEventListener('resize',measure,{passive:true});
-    return () => { cancelAnimationFrame(raf); resize?.disconnect(); state.disconnect(); window.removeEventListener('scroll',scroll); window.removeEventListener('resize',measure); };
+    measure();
+    window.addEventListener('scroll',scroll,{passive:true});window.addEventListener('resize',measure,{passive:true});
+    document.addEventListener('visibilitychange',visibility);
+    return () => {
+      refresh.current = null;
+      cancelAnimationFrame(raf); resize?.disconnect();
+      if (reveal.current) reveal.current.stamp = null;
+      window.removeEventListener('scroll',scroll); window.removeEventListener('resize',measure);
+      document.removeEventListener('visibilitychange',visibility);
+    };
   }, [playing]);
   return <section ref={timeline} className="wordmark-timeline" data-loop aria-labelledby="hero-title">
     <div className="wordmark-pin">
@@ -174,8 +223,11 @@ export function WordmarkHero() {
         <div className="hero-register"><p><span className="register-dot" aria-hidden="true"/>{text.hero.label}</p><span className="mono word-catalog" dir="ltr">ZUUN STUDIO &nbsp; / &nbsp; DESIGN IN MOTION</span></div>
         <div className="word-stage">
           <div className="word-cross word-cross--top" aria-hidden="true"/><div className="word-cross word-cross--bottom" aria-hidden="true"/>
-          <SceneView kind="wordmark" className="word-view" interactive label={e.heroArt} instruction={text.scene.help} options={{ timeline }} fallback={<WordPoster />}/>
-          <span className="word-indicator mono" dir="ltr" aria-hidden="true"><i/>{playing ? '01 — LIVE' : '01 — STILL'}</span>
+          <SceneView kind="wordmark" className="word-view" interactive label={e.heroArt} instruction={text.scene.help} options={{ timeline, reveal }} fallback={<WordPoster />}/>
+          <div className="word-utilities">
+            <span className="word-indicator" data-playing={playing} aria-hidden="true"><i/><span>{playing ? e.revealScroll : e.revealPaused}</span></span>
+            <button className="word-reveal" type="button" onClick={playReveal}><Play size={15} strokeWidth={1.8} aria-hidden="true"/>{e.playReveal}</button>
+          </div>
         </div>
         <div className="hero-caption"><div className="hero-caption-content"><h1 id="hero-title">{e.heroTitle}</h1><p>{e.heroDescription}</p></div><RoundLink href="#about" scrollTo="about" className="round-link--hero">{e.startScroll}</RoundLink></div>
       </div>

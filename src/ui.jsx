@@ -1,3 +1,4 @@
+import { publicAsset } from './runtime';
 import { createContext, useContext } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
@@ -54,7 +55,7 @@ function LanguageLink({ className = '' }) {
 }
 
 function Logo() {
-  return <PageLink page="home" className="brand" aria-label="ZUUN"><img src="/media/zuun.png" alt="ZUUN" width="524" height="249" /></PageLink>;
+  return <PageLink page="home" className="brand" aria-label="ZUUN"><img src={publicAsset('/media/zuun.png')} alt="ZUUN" width="524" height="249" /></PageLink>;
 }
 
 export function Footer() {
